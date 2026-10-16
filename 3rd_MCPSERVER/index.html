@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AnythingLLM 文档工作台</title>
+<style>
+  :root{
+    --bg:#f3f5f9; --card:#ffffff; --ink:#1e293b; --muted:#64748b; --line:#e2e8f0;
+    --primary:#4f6ef7; --primary-2:#7c3aed; --primary-ink:#ffffff;
+    --ok:#16a34a; --err:#dc2626; --warn:#d97706;
+    --radius:12px; --shadow:0 1px 3px rgba(15,23,42,.06),0 4px 14px rgba(15,23,42,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:system-ui,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+       display:flex;flex-direction:column}
+  button{font-family:inherit;cursor:pointer}
+  input{font-family:inherit}
+
+  /* ---------- 顶栏 ---------- */
+  header{display:flex;align-items:center;gap:12px;padding:12px 20px;
+         background:var(--card);border-bottom:1px solid var(--line);flex:none}
+  .logo{width:32px;height:32px;border-radius:9px;flex:none;
+        background:linear-gradient(135deg,var(--primary),var(--primary-2));
+        display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px}
+  header h1{font-size:16px;margin:0;font-weight:700}
+  header .sub{font-size:12px;color:var(--muted);margin-top:1px}
+  .badge{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;
+         background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.ok{background:var(--ok)} .dot.err{background:var(--err)}
+
+  /* ---------- 三栏主体 ---------- */
+  main{flex:1;display:grid;gap:14px;padding:14px 20px;min-height:0;
+       grid-template-columns:minmax(230px,1fr) 1.4fr 0.95fr}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+        box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .card>h2{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.06em;margin:0;
+           padding:12px 16px;border-bottom:1px solid var(--line);flex:none;
+           display:flex;align-items:center;gap:8px}
+  .card>h2 .tag{margin-left:auto;font-weight:500;color:var(--primary);background:rgba(79,110,247,.1);
+                border-radius:999px;padding:2px 8px;font-size:11px;letter-spacing:0}
+
+  /* ---------- 左栏 ---------- */
+  .sidebar .actions{display:flex;flex-direction:column;gap:12px;padding:16px}
+  .btn{display:flex;align-items:center;gap:10px;justify-content:center;width:100%;
+       padding:14px 12px;border-radius:10px;font-size:15px;font-weight:600;border:1px solid transparent;
+       transition:transform .08s ease, box-shadow .15s ease, background .15s ease}
+  .btn:active{transform:translateY(1px)}
+  .btn .ico{font-size:18px;line-height:1}
+  .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:var(--primary-ink);
+               box-shadow:0 6px 16px rgba(79,110,247,.3)}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.06)}
+  .btn-outline{background:var(--card);border-color:var(--line);color:var(--ink)}
+  .btn-outline:hover:not(:disabled){border-color:var(--primary);color:var(--primary);background:#f6f8ff}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;
+                border-radius:50%;animation:spin .8s linear infinite;display:none}
+  .btn.busy .spinner{display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .ws-info{margin:0 16px 12px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;
+           font-size:12px;color:var(--muted);line-height:1.7}
+  .ws-info b{color:var(--ink);font-weight:600}
+  .ws-info .yes{color:var(--ok);font-weight:600}
+
+  /* 目录树 */
+  .tree-wrap{flex:1;min-height:0;display:flex;flex-direction:column;margin:0 12px 12px;
+             border:1px solid var(--line);border-radius:10px;background:#fcfdfe;overflow:hidden}
+  .tree-head{flex:none;padding:9px 12px;font-size:12.5px;font-weight:600;word-break:break-all;
+             border-bottom:1px solid var(--line);background:#fafbfc}
+  .tree{flex:1;overflow:auto;padding:8px;font-size:13px}
+  .tnode{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer;
+         white-space:nowrap}
+  .tnode:hover{background:#eef2ff}
+  .tnode.active{background:#e0e7ff;color:var(--primary)}
+  .tnode .tw{width:16px;flex:none;text-align:center}
+  .tnode .nm{overflow:hidden;text-overflow:ellipsis}
+  .tree-empty{color:var(--muted);font-size:12.5px;text-align:center;padding:16px 8px}
+  .tree-foot{flex:none;padding:8px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);
+             background:#fafbfc}
+
+  /* ---------- 中栏:上=预览 下=历史 ---------- */
+  .mid{display:flex;flex-direction:column;gap:14px;min-height:0}
+  .pv-top{flex:3}
+  .pv-bottom{flex:2}
+  .pv-top .body{flex:1;display:flex;flex-direction:column;min-height:0}
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+         gap:10px;color:var(--muted);font-size:13px;text-align:center}
+  .empty .ico{font-size:44px;opacity:.55}
+  .viewer{flex:1;min-height:0;overflow:auto;padding:16px}
+  .viewer.file{background:#0f172a;color:#e2e8f0;font-family:ui-monospace,Consolas,monospace;
+               font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word;margin:0}
+  .viewer img{max-width:100%;height:auto;border-radius:8px}
+  .viewer iframe{width:100%;height:100%;border:0;border-radius:8px}
+  .file-meta{flex:none;padding:10px 16px;border-top:1px solid var(--line);font-size:12px;
+             color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:#fafbfc}
+  .file-meta b{color:var(--ink)}
+  .file-meta .mbtns{margin-left:auto;display:flex;gap:8px}
+  .btn-sm{padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);
+          background:var(--card);color:var(--ink)}
+  .btn-sm:hover:not(:disabled){border-color:var(--primary);color:var(--primary)}
+  .btn-sm.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn-sm.primary:hover:not(:disabled){filter:brightness(1.06)}
+  .btn-sm:disabled{opacity:.55;cursor:not-allowed}
+
+  /* 文档列表(查阅文件) */
+  .doclist{flex:1;overflow:auto;padding:10px 14px;margin:0;list-style:none}
+  .doclist li{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);
+              border-radius:9px;margin-bottom:8px;background:#fcfdfe;font-size:13.5px;cursor:pointer}
+  .doclist li:hover{border-color:var(--primary);background:#f6f8ff}
+  .doclist .fic{font-size:17px}
+  .doclist .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .doclist .fold{color:var(--primary);font-size:12px;font-weight:600;flex:none}
+  .chip{flex:none;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+  .chip.ok{background:#e9f8ef;color:var(--ok)} .chip.wait{background:#f1f5f9;color:var(--muted)}
+  .list-footer{padding:8px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);
+               display:flex;align-items:center;gap:8px}
+
+  /* 历史浏览 */
+  .hist{flex:1;overflow:auto;list-style:none;margin:0;padding:8px 10px}
+  .hist li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
+           font-size:13px;cursor:pointer}
+  .hist li:hover{background:#f6f8ff}
+  .hist .hm{flex:1;min-width:0}
+  .hist .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+  .hist .st{font-size:11.5px;color:var(--muted)}
+  .hist .time{flex:none;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .hist-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);
+              font-size:12.5px}
+  .pv-bottom h2 .btn-sm{margin-left:auto;padding:3px 10px;font-size:11.5px}
+
+  /* ---------- 右栏 ---------- */
+  .qa{padding:12px 16px;flex:1;display:flex;flex-direction:column;min-height:0}
+  .qa .msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;min-height:60px}
+  .msg{max-width:92%;padding:9px 12px;border-radius:10px;font-size:13.5px;line-height:1.65;
+       white-space:pre-wrap;word-break:break-word}
+  .msg.q{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:3px}
+  .msg.a{align-self:flex-start;background:#f1f5f9;border-bottom-left-radius:3px}
+  .msg.a.err{background:#fef2f2;color:var(--err)}
+  .msg .think{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;
+              border-left:2px solid var(--line);padding-left:8px;white-space:pre-wrap}
+  .qa .form{display:flex;gap:8px;flex:none}
+  .qa input{flex:1;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;outline:none}
+  .qa input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,110,247,.12)}
+  .qa button{flex:none;padding:9px 16px;border:0;border-radius:9px;background:var(--primary);color:#fff;
+             font-weight:600;font-size:13.5px}
+  .qa button:disabled{opacity:.55;cursor:not-allowed}
+
+  .log{flex:1;overflow:auto;padding:10px 16px;font-size:12.5px;line-height:1.8}
+  .log .row{display:flex;gap:8px;padding:4px 0;border-bottom:1px dashed #eef1f6}
+  .log .time{color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+  .log .ok{color:var(--ok)} .log .err{color:var(--err)}
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width:1000px){
+    main{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;overflow:auto}
+    .sidebar .actions{flex-direction:row}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">A</div>
+  <div>
+    <h1>AnythingLLM 文档工作台</h1>
+    <div class="sub">文件夹树 · 上传预览 · 查阅 · 历史 · 问答</div>
+  </div>
+  <div class="badge">
+    <span class="dot" id="dot"></span>
+    <span>工作区 <b id="ws">检测中…</b></span>
+  </div>
+</header>
+
+<main>
+  <!-- 左栏:功能 + 目录树 -->
+  <section class="card sidebar">
+    <h2>功能</h2>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnAdd">
+        <span class="ico">📂</span><span id="addLabel">添加文件</span>
+      </button>
+      <button class="btn btn-outline" id="btnList">
+        <span class="ico">📚</span>查阅文件<span class="spinner"></span>
+      </button>
+    </div>
+    <div class="ws-info" id="wsInfo">正在连接 AnythingLLM…</div>
+    <div class="tree-wrap" id="treeWrap" hidden>
+      <div class="tree-head">🗂️ <span id="folderName">文件夹</span></div>
+      <div class="tree" id="tree"></div>
+      <div class="tree-foot" id="treeFoot"></div>
+    </div>
+  </section>
+
+  <!-- 中栏:上=预览区 下=历史浏览区 -->
+  <section class="mid">
+    <div class="card pv-top">
+      <h2><span id="pvTitle">📄 文件预览</span><span class="tag" id="pvTag"></span></h2>
+      <div class="body">
+        <div class="empty" id="empty">
+          <div class="ico">🪄</div>
+          <div>点击左侧「添加文件」选择文件夹,<br>在目录树中点击文件即可预览,<br>或「查阅文件」浏览已上传文档</div>
+        </div>
+        <div class="viewer" id="viewer" hidden></div>
+        <div class="file-meta" id="meta" hidden></div>
+        <ul class="doclist" id="doclist" hidden></ul>
+        <div class="list-footer" id="listFooter" hidden></div>
+      </div>
+    </div>
+    <div class="card pv-bottom">
+      <h2>🕘 历史浏览<button class="btn-sm" id="btnClearHist">清空</button></h2>
+      <div class="hist-empty" id="histEmpty">暂无浏览记录</div>
+      <ul class="hist" id="hist" hidden></ul>
+    </div>
+  </section>
+
+  <!-- 右栏:问答 + 日志 -->
+  <section style="display:flex;flex-direction:column;gap:14px;min-height:0">
+    <div class="card" style="flex:1.1">
+      <h2>💬 知识问答 <span class="tag" id="qaTag">v1/question</span></h2>
+      <div class="qa">
+        <div class="msgs" id="msgs">
+          <div class="msg a">你好!我已连接工作区,可基于已嵌入文档回答你的问题。</div>
+        </div>
+        <form class="form" id="qaForm">
+          <input id="qaInput" placeholder="输入问题,例如:文档里提到了什么?" autocomplete="off">
+          <button id="qaSend" type="submit">发送</button>
+        </form>
+      </div>
+    </div>
+    <div class="card" style="flex:0.9">
+      <h2>🧾 操作日志</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </section>
+</main>
+
+<input type="file" id="dirInput" webkitdirectory hidden>
+
+<script>
+const KEY = "VYGE77Q-ZENM64Q-QJNTW3T-2BGSMMH";
+const BASE = "http://localhost:3001/api/v1";
+const auth = { Authorization: `Bearer ${KEY}` };
+const HIST_KEY = "aollm_history";
+let slug = "";
+let fileByPath = {};          // 目录树内文件: relPath -> File
+let folderLabel = "";
+let history = loadHist();     // 历史浏览记录
+
+const $ = (id) => document.getElementById(id);
+const now = () => new Date().toLocaleTimeString("zh-CN", { hour12: false });
+
+function log(msg, cls) {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = `<span class="time">${now()}</span><span class="${cls || ""}">${msg}</span>`;
+  $("log").prepend(row);
+}
+function setDot(state) { $("dot").className = "dot " + (state || ""); }
+
+function showViewer(el) {
+  $("viewer").hidden = true;
+  $("doclist").hidden = true;
+  $("empty").hidden = true;
+  (el || $("empty")).hidden = false;
+  $("meta").hidden = !$("meta").dataset.show;
+}
+
+/* ---------- 初始化:检测工作区 ---------- */
+(async () => {
+  try {
+    const r = await fetch(`${BASE}/workspaces`, { headers: auth });
+    const d = await r.json();
+    const w = (d.workspaces || [])[0];
+    slug = w ? w.slug : "";
+    $("ws").textContent = w ? `${w.name}(${w.slug})` : "未找到";
+    $("wsInfo").innerHTML = slug
+      ? `目标工作区: <b>${w.name}</b><br>状态 <b class="yes">已连接</b>,可上传并嵌入`
+      : "未找到可用工作区,请先在 AnythingLLM 中创建。";
+    $("qaTag").textContent = slug ? `workspace: ${slug}` : "无工作区";
+    setDot(slug ? "ok" : "err");
+    log(slug ? `已连接工作区 ${w.name}(${w.slug})` : "未找到工作区", slug ? "ok" : "err");
+  } catch (e) {
+    setDot("err");
+    $("ws").textContent = "连接失败";
+    $("wsInfo").textContent = "无法连接 AnythingLLM: " + e.message;
+    log("连接失败: " + e.message, "err");
+  }
+})();
+
+/* ================= 添加文件:选文件夹 → 左侧目录树 ================= */
+$("btnAdd").addEventListener("click", () => $("dirInput").click());
+
+$("dirInput").addEventListener("change", (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  fileByPath = {};
+  buildTree(files);
+  if (folderLabel) {
+    $("addLabel").textContent = "更换文件夹";
+    log(`📂 已加载文件夹 <b>${folderLabel}</b>,共 ${files.length} 个文件`, "ok");
+  }
+});
+
+function buildTree(files) {
+  const root = {};
+  files.forEach((f) => {
+    const parts = (f.webkitRelativePath || f.name).split("/");
+    folderLabel = parts[0];
+    let node = root;
+    parts.forEach((p, i) => {
+      if (i === parts.length - 1) { node.files = node.files || []; node.files.push(f); }
+      else { node.dirs = node.dirs || {}; node.dirs[p] = node.dirs[p] || {}; node = node.dirs[p]; }
+      void 0;
+    });
+    fileByPath[f.webkitRelativePath || f.name] = f;
+  });
+  renderTree(root, 0);
+  $("folderName").textContent = folderLabel;
+  $("treeFoot").textContent = `共 ${files.length} 个文件 · 点击预览`;
+  $("treeWrap").hidden = false;
+}
+
+function renderTree(node) {
+  const tree = $("tree");
+  tree.innerHTML = "";
+  let count = 0;
+
+  function render(n, indent, parentEl) {
+    if (n.dirs) Object.keys(n.dirs).sort().forEach((name) => {
+      count++;
+      const kids = document.createElement("div");
+      kids.className = "kids";
+      const row = document.createElement("div");
+      row.className = "tnode";
+      row.style.paddingLeft = (indent * 16 + 6) + "px";
+      row.innerHTML = `<span class="tw">▾</span><span class="ic">📁</span><span class="nm"></span>`;
+      row.querySelector(".nm").textContent = name;
+      row.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        kids.hidden = !kids.hidden;
+        row.querySelector(".tw").textContent = kids.hidden ? "▸" : "▾";
+      });
+      parentEl.appendChild(row);
+      parentEl.appendChild(kids);
+      render(n.dirs[name], indent + 1, kids);
+    });
+    if (n.files) n.files.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach((f) => {
+      count++;
+      const row = document.createElement("div");
+      row.className = "tnode file";
+      row.style.paddingLeft = (indent * 16 + 6) + "px";
+      row.innerHTML = `<span class="tw"></span><span class="ic">📄</span><span class="nm"></span>`;
+      row.querySelector(".nm").textContent = f.name;
+      row.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        tree.querySelectorAll(".tnode.active").forEach((x) => x.classList.remove("active"));
+        row.classList.add("active");
+        openLocalFile(f, f.webkitRelativePath || f.name);
+      });
+      parentEl.appendChild(row);
+    });
+  }
+
+  render(node, 0, tree);
+  if (!count) {
+    const d = document.createElement("div");
+    d.className = "tree-empty";
+    d.textContent = "该文件夹内没有文件";
+    tree.appendChild(d);
+  }
+}
+
+/* ================= 本地文件预览(来自目录树) ================= */
+function openLocalFile(file, relPath, fromHist) {
+  const title = file.name;
+  $("pvTitle").textContent = `📄 ${title}`;
+  $("pvTag").textContent = relPath;
+  showViewer($("viewer"));
+  const viewer = $("viewer"), meta = $("meta");
+  meta.dataset.show = "1";
+  meta.innerHTML =
+    `<span>名称 <b>${title}</b></span><span>大小 <b>${(file.size / 1024).toFixed(1)} KB</b></span>` +
+    `<span class="mbtns"><button class="btn-sm primary" id="btnUpload">📤 上传并嵌入</button></span>`;
+  $("btnUpload").addEventListener("click", () => uploadFile(file, title));
+
+  const t = file.type || "";
+  if (t.startsWith("image/")) {
+    viewer.className = "viewer";
+    viewer.innerHTML = "";
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    viewer.appendChild(img);
+  } else if (t === "application/pdf" || /\.pdf$/i.test(title)) {
+    viewer.className = "viewer";
+    viewer.innerHTML = "";
+    const ifr = document.createElement("iframe");
+    ifr.src = URL.createObjectURL(file);
+    viewer.appendChild(ifr);
+  } else if (t.startsWith("text/") || /\.(txt|md|json|py|js|html|css|csv|log|xml|yaml|yml)$/i.test(title)) {
+    const rd = new FileReader();
+    rd.onload = () => { viewer.className = "viewer file"; viewer.textContent = rd.result; };
+    rd.readAsText(file);
+  } else {
+    viewer.className = "viewer";
+    viewer.innerHTML = `<div class="empty" style="height:100%"><div class="ico">🗂️</div><div>该类型不支持在线预览</div></div>`;
+  }
+  if (!fromHist) addHistory({ src: "local", title, sub: relPath, time: now(), local: { path: relPath, size: file.size, type: file.type } });
+}
+
+/* ================= 上传并嵌入 ================= */
+async function uploadFile(file, displayName) {
+  if (!slug) return alert("工作区不可用");
+  const btn = $("btnUpload");
+  if (!btn) return alert("请先在预览区点击「上传并嵌入」");
+  btn.disabled = true;
+  btn.textContent = "上传中…";
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("addToWorkspaces", slug);
+  try {
+    const r = await fetch(`${BASE}/document/upload`, { method: "POST", headers: auth, body: fd });
+    const d = await r.json();
+    if (d.success) {
+      const t = (d.documents && d.documents[0] && d.documents[0].title) || displayName;
+      btn.textContent = "✅ 已上传";
+      log(`✅ 已上传并嵌入 <b>${t}</b> 到工作区 ${slug}`, "ok");
+    } else {
+      btn.disabled = false;
+      btn.textContent = "重试";
+      log(`上传失败: ${d.error || "未知错误"}`, "err");
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = "重试";
+    log("上传异常: " + err.message, "err");
+  }
+}
+
+/* ================= 查阅文件 ================= */
+async function viewDocs() {
+  const btn = $("btnList");
+  btn.classList.add("busy");
+  $("pvTitle").textContent = "📚 已上传文档";
+  $("pvTag").textContent = "";
+  showViewer($("doclist"));
+  const ul = $("doclist"), footer = $("listFooter");
+  ul.innerHTML = "";
+  footer.hidden = true;
+  try {
+    const r = await fetch(`${BASE}/documents`, { headers: auth });
+    const d = await r.json();
+    const items = (d.localFiles && d.localFiles.items) || [];
+    let total = 0;
+    const walk = (arr, path) => arr.forEach((it) => {
+      if (it.type === "folder") { walk(it.items || [], path + it.name + "/"); return; }
+      total++;
+      const li = document.createElement("li");
+      const title = it.title || it.name;
+      li.innerHTML = `<span class="fic">📄</span>
+        <span class="nm" title="${path}${it.name}">${path || ""}<b>${title}</b></span>
+        ${it.cached ? '<span class="chip ok">已嵌入</span>' : '<span class="chip wait">未嵌入</span>'}
+        <span class="fold">点击预览</span>`;
+      li.addEventListener("click", () => previewServerDoc(it));
+      ul.appendChild(li);
+    });
+    walk(items, "");
+    footer.hidden = false;
+    footer.innerHTML = `共 <b>${total}</b> 个文件${slug ? ` · 嵌入工作区 <b>${slug}</b>` : ""} · 点击文件预览`;
+    log(`📚 查阅文件: ${total} 个`, "ok");
+    if (!total) {
+      const li = document.createElement("li");
+      li.style.justifyContent = "center";
+      li.style.color = "var(--muted)";
+      li.textContent = "暂无文档";
+      ul.appendChild(li);
+    }
+  } catch (err) {
+    log("查阅文件失败: " + err.message, "err");
+  } finally {
+    btn.classList.remove("busy");
+  }
+}
+$("btnList").addEventListener("click", viewDocs);
+
+/* ================= 服务端文档预览(点击列表项) ================= */
+async function previewServerDoc(it, fromHist) {
+  const title = it.title || it.name;
+  $("pvTitle").textContent = `📄 ${title}`;
+  $("pvTag").textContent = "";
+  showViewer($("viewer"));
+  const viewer = $("viewer"), meta = $("meta");
+  meta.dataset.show = "1";
+  meta.innerHTML =
+    `<span>文档 <b>${title}</b></span>` +
+    (it.cached ? '<span class="chip ok">已嵌入</span>' : '<span class="chip wait">未嵌入</span>') +
+    `<span class="mbtns">
+       <button class="btn-sm primary" id="btnReembed">🔄 重新嵌入</button>
+       <button class="btn-sm" id="btnBack">← 返回列表</button>
+     </span>`;
+  viewer.className = "viewer file";
+  viewer.textContent = "加载中…";
+  try {
+    const r = await fetch(`/api/doc-content?name=${encodeURIComponent(it.name)}`);
+    const d = await r.json();
+    if (r.ok && d.content) {
+      viewer.textContent = d.content;
+      const m = d.meta || {};
+      const extra = (m.wordCount ? `<span>字数 <b>${m.wordCount}</b></span>` : "") +
+                    (m.published ? `<span>发布 <b>${m.published}</b></span>` : "") +
+                    (m.tokenEstimate ? `<span>约 <b>${m.tokenEstimate}</b> tokens</span>` : "");
+      meta.innerHTML =
+        `<span>文档 <b>${title}</b></span>${extra}` +
+        (it.cached ? '<span class="chip ok">已嵌入</span>' : '<span class="chip wait">未嵌入</span>') +
+        `<span class="mbtns">
+           <button class="btn-sm primary" id="btnReembed">🔄 重新嵌入</button>
+           <button class="btn-sm" id="btnBack">← 返回列表</button>
+         </span>`;
+    } else {
+      viewer.className = "viewer";
+      viewer.innerHTML = `<div class="empty" style="height:100%"><div class="ico">🗂️</div><div>该文档暂无可预览的正文</div></div>`;
+    }
+  } catch (err) {
+    viewer.className = "viewer";
+    viewer.innerHTML = `<div class="empty" style="height:100%"><div class="ico">⚠️</div><div>预览失败: ${err.message}</div></div>`;
+  }
+  $("btnBack").addEventListener("click", viewDocs);
+  $("btnReembed").addEventListener("click", () => reembed(it));
+  if (!fromHist) addHistory({ src: "doc", title, sub: it.name, time: now(), doc: { name: it.name, title, cached: it.cached } });
+}
+
+/* ================= 重新嵌入 ================= */
+async function reembed(it) {
+  if (!slug) return alert("工作区不可用");
+  const btn = $("btnReembed");
+  btn.disabled = true;
+  btn.textContent = "正在嵌入…";
+  try {
+    const r = await fetch(`${BASE}/workspace/${slug}/update-embeddings`, {
+      method: "POST",
+      headers: { ...auth, "Content-Type": "application/json" },
+      body: JSON.stringify({ adds: [`custom-documents/${it.name}`], deletes: [] }),
+    });
+    const d = await r.json();
+    const err = d && (d.error || d.message);
+    if (r.ok && !err) {
+      btn.textContent = "✅ 已提交";
+      log(`🔄 已提交重嵌入 <b>${it.title || it.name}</b> 到工作区 ${slug}`, "ok");
+      setTimeout(viewDocs, 2000);
+    } else {
+      btn.disabled = false;
+      btn.textContent = "重试";
+      log(`重嵌入失败: ${err || r.status}`, "err");
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "重试";
+    log("重嵌入异常: " + e.message, "err");
+  }
+}
+
+/* ================= 历史浏览 ================= */
+function loadHist() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); } catch { return []; }
+}
+function saveHist() {
+  try { localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(0, 50))); } catch {}
+}
+function addHistory(entry) {
+  history.unshift(entry);
+  if (history.length > 50) history.pop();
+  saveHist();
+  renderHist();
+}
+function renderHist() {
+  const ul = $("hist");
+  ul.innerHTML = "";
+  $("histEmpty").hidden = history.length > 0;
+  ul.hidden = history.length === 0;
+  history.forEach((e) => {
+    const li = document.createElement("li");
+    const ico = e.src === "doc" ? "📄" : "🗂️";
+    li.innerHTML = `<span>${ico}</span>
+      <span class="hm"><div class="tt">${e.title}</div><div class="st">${e.sub || ""} · ${e.src === "doc" ? "服务端文档" : "本地文件"}</div></span>
+      <span class="time">${e.time}</span>`;
+    li.addEventListener("click", () => {
+      if (e.src === "doc" && e.doc) previewServerDoc(e.doc, true);
+      else if (e.src === "local" && e.local) {
+        const f = fileByPath[e.local.path];
+        if (f) openLocalFile(f, e.local.path, true);
+        else log("该本地文件仅保留记录,请重新选择文件夹后预览", "err");
+      }
+    });
+    ul.appendChild(li);
+  });
+}
+$("btnClearHist").addEventListener("click", () => {
+  history = [];
+  saveHist();
+  renderHist();
+  log("🧹 已清空浏览历史", "ok");
+});
+renderHist();
+
+/* ================= 知识问答 ================= */
+$("qaForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = $("qaInput").value.trim();
+  if (!q || !slug) return alert(slug ? "问题不能为空" : "工作区不可用");
+  const msgs = $("msgs");
+  const qDiv = document.createElement("div");
+  qDiv.className = "msg q";
+  qDiv.textContent = q;
+  msgs.appendChild(qDiv);
+  $("qaInput").value = "";
+  $("qaSend").disabled = true;
+
+  const aDiv = document.createElement("div");
+  aDiv.className = "msg a";
+  aDiv.textContent = "思考中…";
+  msgs.appendChild(aDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+  try {
+    const r = await fetch(`${BASE}/workspace/${slug}/chat`, {
+      method: "POST", headers: { ...auth, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: q, mode: "query", sessionId: "web-qa" }),
+    });
+    const d = await r.json();
+    const raw = d.textResponse || "";
+    const out = stripThinking(raw) || "（未返回回答）";
+    aDiv.innerHTML = "";
+    const think = extractThink(raw);
+    if (think) { const s = document.createElement("span"); s.className = "think"; s.textContent = think; aDiv.appendChild(s); }
+    aDiv.appendChild(document.createTextNode(out));
+  } catch (err) {
+    aDiv.className = "msg a err";
+    aDiv.textContent = "请求失败: " + err.message;
+  } finally {
+    $("qaSend").disabled = false;
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+});
+
+function extractThink(raw) {
+  if (typeof raw !== "string") return "";
+  const i = raw.indexOf("response");
+  if (raw.startsWith("thinking") && i > 0) return "思考过程: " + raw.slice(0, i).replace(/^thinking\s*/, "").trim().slice(0, 400);
+  return "";
+}
+function stripThinking(raw) {
+  if (typeof raw !== "string") return raw;
+  if (raw.startsWith("thinking")) {
+    const i = raw.indexOf("response");
+    if (i > 0) return raw.slice(i + "response".length).trim();
+  }
+  return raw;
+}
+
+log("页面就绪,等待连接…");
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+# ---- Python virtual environments ----
+.venv/
+venv/
+env/
+ENV/
+
+# ---- Python bytecode & caches ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- Compiled binaries ----
+*.exe
+*.dll
+*.pyd
+*.so
+*.dylib
+
+# ---- Databases ----
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ---- Local secrets (never commit) ----
+Agent/Practice01/config.ini
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
