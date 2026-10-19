@@ -1,0 +1,11 @@
+[project]
+name = "pet-hospital-mcp"
+version = "0.1.0"
+description = "MCP server exposing Pet Hospital REST API (GET /api/v1/pets) as a list_pets tool"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=2.0.0",
+]
+
+[project.scripts]
+pet-hospital-mcp = "server:main"
