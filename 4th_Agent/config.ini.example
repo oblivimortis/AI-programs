@@ -1,0 +1,55 @@
+[llm]
+# OpenAI 兼容的 chat/completions 接口（DeepSeek / OpenAI / vLLM 均可）
+base_url = https://api.deepseek.com/v1/chat/completions
+# 填入自己的 API Key，或使用环境变量 AGENT_LLM_API_KEY
+api_key = your-api-key-here
+model = deepseek-chat
+temperature = 0.7
+# 单次提问最多允许的工具调用轮次
+max_tool_rounds = 5
+# 单次 HTTP 请求超时（秒）
+request_timeout = 120
+# 是否携带 tools schema
+enable_tools = true
+
+[tools]
+# 工具的工作区根目录，留空表示使用当前工作目录
+root =
+# 是否强制所有路径都限制在 root 之内（沙箱模式）
+enforce_root = false
+# 是否允许 removeFile / removeDir
+allow_delete = true
+# readFile 单次读取的最大字符数
+max_read_chars = 50000
+
+[agent]
+# 系统提示词，留空使用内置提示词
+system_prompt =
+
+[skills]
+# 是否启用 Agent Skills 动态加载
+# 初始化只读取 SKILL.md 的 name / description 并写入系统提示词，
+# 完整正文由模型按需调用 loadSkill 工具读取。
+enabled = true
+# 热重载：每次提问前重新扫描技能元数据（不读取正文）
+hot_reload = true
+# 技能根目录，可写多个目录，用英文逗号（或分号/换行）分隔
+# 程序启动时还会自动扫描当前工作目录下的 .agents/skills
+# 相对路径以 [tools] root 为基准；路径含空格时不要加引号
+#
+# 每个根目录支持两种布局（可混用）：
+#   1) 技能集合目录：<root>/<skill_name>/SKILL.md
+#   2) 单个技能目录：<root>/SKILL.md
+#
+# 例如把两个不同文件夹里的技能一起加载：
+#   root = office/.agents/skills, new skill/role, D:/shared/skills
+root = .agents/skills
+
+[search]
+# 百度千帆「智能搜索生成」API Key（Bearer Token）
+# 也可以在环境变量 AGENT_SEARCH_BAIDU_QIANFAN_API_KEY 中设置，避免写入文件
+baidu_qianfan_api_key =
+# 智能搜索生成使用的模型（需在千帆平台开通）
+model = ernie-4.5-turbo-32k
+# 单次搜索请求超时（秒）；智能搜索生成包含模型总结，建议不低于 60
+request_timeout = 60

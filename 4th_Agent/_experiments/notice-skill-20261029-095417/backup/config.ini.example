@@ -1,0 +1,36 @@
+[llm]
+# OpenAI 兼容的 chat/completions 接口（DeepSeek / OpenAI / vLLM 均可）
+base_url = https://api.deepseek.com/v1/chat/completions
+# 填入自己的 API Key，或使用环境变量 AGENT_LLM_API_KEY
+api_key = your-api-key-here
+model = deepseek-chat
+temperature = 0.7
+# 单次提问最多允许的工具调用轮次
+max_tool_rounds = 5
+# 单次 HTTP 请求超时（秒）
+request_timeout = 120
+# 是否携带 tools schema
+enable_tools = true
+
+[tools]
+# 工具的工作区根目录，留空表示使用当前工作目录
+root =
+# 是否强制所有路径都限制在 root 之内（沙箱模式）
+enforce_root = false
+# 是否允许 removeFile / removeDir
+allow_delete = true
+# readFile 单次读取的最大字符数
+max_read_chars = 50000
+
+[agent]
+# 系统提示词，留空使用内置提示词
+system_prompt =
+
+[search]
+# 百度千帆「智能搜索生成」API Key（Bearer Token）
+# 也可以在环境变量 AGENT_SEARCH_BAIDU_QIANFAN_API_KEY 中设置，避免写入文件
+baidu_qianfan_api_key =
+# 智能搜索生成使用的模型（需在千帆平台开通）
+model = ernie-4.5-turbo-32k
+# 单次搜索请求超时（秒）；智能搜索生成包含模型总结，建议不低于 60
+request_timeout = 60
