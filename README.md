@@ -9,9 +9,9 @@
 | `1st_Pet Hospital/`、`2nd_AnythingLLM MCP/`、`3rd_MCPSERVER/` | 课程与实验项目 |
 | `Agent/Practice01`、`Agent/practice02` | 聊天与工具调用示例脚本 |
 | `Agent/sync-persona.mjs` | 人设同步脚本 |
-| `agent.py`、`core/`、`tui/` 等（仓库根目录） | 分层架构的本地 Agent 应用，原位于 `Agent/this is an Agent/` |
+| `Agent/this is an Agent/` | 分层架构的本地 Agent 应用（`core` + `tui`） |
 
-> 本地扫描产物 `_scan/`、嵌套项目目录 `Agent/this is an Agent/` 以及含密钥的 `config.ini` 已在 `.gitignore` 中排除，不随仓库发布。
+> 本地扫描产物 `_scan/` 与含密钥的 `config.ini` 已在 `.gitignore` 中排除，不随仓库发布。
 
 ---
 
