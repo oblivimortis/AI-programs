@@ -1,0 +1,40 @@
+{
+  "type": "skillhub-expert-package",
+  "slug": "content-creation-screenwriting",
+  "displayName": "剧本创作",
+  "summary": "覆盖剧本创作从「短剧主驱动 + 专业流水线」到「电影编剧经典方法论 + 广播剧/有声剧专项」再到「多代理工程化 + 去 AI 味多轮审查」的完整工具集，全部免 API Key",
+  "skillSlugs": [
+    "short-drama-writer",
+    "short-drama-pro",
+    "wahoo",
+    "text-echo-chamber",
+    "walrus03",
+    "drama-script"
+  ],
+  "skills": [
+    {
+      "slug": "short-drama-writer",
+      "namespace": "clawhub_ckchzh"
+    },
+    {
+      "slug": "short-drama-pro",
+      "namespace": null
+    },
+    {
+      "slug": "wahoo",
+      "namespace": "clawhub_wenqin1688"
+    },
+    {
+      "slug": "text-echo-chamber",
+      "namespace": "user_ca394edf"
+    },
+    {
+      "slug": "walrus03",
+      "namespace": "user_7290fc8d"
+    },
+    {
+      "slug": "drama-script",
+      "namespace": "clawhub_linhongbijkm-dot"
+    }
+  ]
+}
