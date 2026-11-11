@@ -1,0 +1,64 @@
+%% 基于 Agent/practice02/chat-tool-fileops.py 的代码架构图
+%% 架构：LLM Agent 主循环 + 流式解析 + 本地文件操作工具系统
+%% 工具共 11 个：getDate / isLeapYear / getCwd / listFiles / getFileType
+%%             / readFile / createFile / editFile / mkdir / removeDir / removeFile
+flowchart TD
+    User([用户输入 prompt]) --> Main
+
+    subgraph Config["配置层"]
+        ConfigIni[("config.ini")]
+        IniRead["configparser 读取<br/>encoding = utf-8"]
+        Cfg["s = c['llm']<br/>base_url / api_key / model"]
+        ConfigIni --> IniRead --> Cfg
+    end
+
+    Main["主循环 while True<br/>messages 对话历史列表<br/>role / content / tool_calls"]
+    Cfg --> Main
+    Main -->|"EOF (Ctrl+D)"| End([程序结束])
+    Main -->|"追加 role=user 消息"| CallLLM
+
+    subgraph LLMCall["LLM 调用与流式解析层"]
+        CallLLM["call_llm(messages)<br/>requests.post stream=True<br/>请求携带 tools schema"]
+        Parse["SSE 流逐行解析<br/>过滤 data: 前缀, 跳过 DONE"]
+        Delta{"delta 分片类型"}
+        CallLLM --> Parse --> Delta
+    end
+
+    API([DeepSeek API<br/>deepseek-chat 模型])
+    CallLLM <-->|"HTTP SSE 流式请求/响应"| API
+
+    Delta -->|"content 文本"| Print["print 实时打印<br/>累积到 content"]
+    Delta -->|"tool_calls 分片"| Acc["按 index 聚合<br/>id / name / arguments"]
+    Print --> Judge{"本轮是否<br/>还有 tool_calls?"}
+    Acc --> Judge
+
+    Judge -->|"无：输出最终回复"| Final["messages.append<br/>role=assistant, content"]
+    Final --> Main
+
+    Judge -->|"有：执行工具<br/>每问最多 5 轮"| Exec
+
+    subgraph ToolSys["工具系统"]
+        ToolSchemas["tools schema 列表<br/>11 个工具的名称/描述/参数定义"]
+        ToolSchemas -.->|"随请求发送给模型"| CallLLM
+        Exec["run_tool(name, args)<br/>json.loads 解析 arguments"]
+        Dispatch{"按 name 分发"}
+        Exec --> Dispatch
+
+        subgraph Impl["工具实现层"]
+            GD["getDate<br/>subprocess 调本地命令<br/>cmd /c date /t 与 time /t"]
+            ILY["isLeapYear<br/>纯 Python 闰年算法<br/>能被4整除且不被100整除, 或被400整除"]
+            FC["getCwd / listFiles / getFileType<br/>os.getcwd / os.listdir<br/>os.path.splitext + mimetypes"]
+            FR["readFile / createFile / editFile<br/>open() utf-8 纯文本读写<br/>超过 5 万字符自动截断"]
+            FD["mkdir / removeDir / removeFile<br/>os.makedirs / shutil.rmtree<br/>os.remove"]
+        end
+
+        Dispatch --> GD & ILY & FC & FR & FD
+    end
+
+    GD -.-> OS([操作系统 cmd 命令行])
+    FR -.-> FS[(本地文件系统)]
+    FD -.-> FS
+
+    GD & ILY & FC & FR & FD --> ToolResult["返回结果字符串<br/>打印 [tool] 调用日志"]
+    ToolResult --> AppendTool["messages.append<br/>role=tool + tool_call_id"]
+    AppendTool --> CallLLM

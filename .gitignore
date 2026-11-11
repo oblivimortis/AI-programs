@@ -30,7 +30,11 @@ htmlcov/
 *.sqlite3
 
 # ---- Local secrets (never commit) ----
-Agent/Practice01/config.ini
+config.ini
+
+# ---- Local scratch & fetched media (large, not for publishing) ----
+_scan/
+Agent/this is an Agent/
 
 # ---- OS / editor ----
 .DS_Store
