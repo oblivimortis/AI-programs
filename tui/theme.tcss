@@ -1,0 +1,83 @@
+/* ==========================================================================
+   Agent TUI 主题
+   只负责外观，不包含任何业务逻辑。
+   ========================================================================== */
+
+Screen {
+    layout: vertical;
+    background: $surface;
+}
+
+Header {
+    background: $panel;
+}
+
+Footer {
+    background: $panel;
+}
+
+/* 主区域：对话日志 + 侧边栏 ---------------------------------------------- */
+
+#body {
+    height: 1fr;
+    width: 100%;
+}
+
+#chat-log {
+    width: 1fr;
+    height: 1fr;
+}
+
+/* 底部输入区 ------------------------------------------------------------ */
+
+#composer {
+    height: auto;
+    width: 100%;
+    padding: 0 1;
+    background: $panel;
+}
+
+#status {
+    height: 1;
+    padding: 0 1;
+}
+
+/* 消息气泡 -------------------------------------------------------------- */
+
+.turn-block {
+    height: auto;
+}
+
+.role-label {
+    height: 1;
+    text-style: bold;
+}
+
+.user-body {
+    height: auto;
+}
+
+.assistant-body {
+    height: auto;
+}
+
+NoticeView {
+    height: auto;
+}
+
+/* 工具调用卡片 ---------------------------------------------------------- */
+
+ToolCallView {
+    height: auto;
+}
+
+.tool-result {
+    height: auto;
+}
+
+/* 侧边栏 --------------------------------------------------------------- */
+
+Sidebar {
+    width: 30;
+    height: 1fr;
+}

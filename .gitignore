@@ -16,6 +16,10 @@ __pycache__/
 .coverage
 htmlcov/
 
+# ---- Build output ----
+build/
+dist/
+
 # ---- Compiled binaries ----
 *.exe
 *.dll
@@ -28,6 +32,9 @@ htmlcov/
 *.db-journal
 *.sqlite
 *.sqlite3
+
+# ---- Environment files ----
+.env
 
 # ---- Local secrets (never commit) ----
 config.ini

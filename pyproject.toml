@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-tui"
+version = "0.1.0"
+description = "core / tui 分层的 Agent 应用：core 负责内核，tui 负责 Textual 终端界面"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "textual>=0.80",
+    "requests>=2.31",
+    "trafilatura>=2.0",
+]
+
+[project.scripts]
+agent-tui = "tui.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["core*", "tui*"]
+
+[tool.setuptools.package-data]
+tui = ["*.tcss"]
