@@ -41,7 +41,9 @@ config.ini
 
 # ---- Local scratch & fetched media (large, not for publishing) ----
 _scan/
-Agent/this is an Agent/
+
+# ---- Nested repo metadata kept outside version control ----
+.git.local/
 
 # ---- OS / editor ----
 .DS_Store
